@@ -47,6 +47,352 @@ Errors are learning opportunities. When something breaks:
 4. Update directive to include new flow
 5. System is now stronger
 
+---
+
+## How to Write Directives
+
+Directives are **SOPs (Standard Operating Procedures)** written in Markdown. They tell the agent what to do, which tools to use, and how to handle edge cases. Write them like instructions for a mid-level employee.
+
+### Directive Structure
+
+Use this template for new directives:
+
+```markdown
+# Directive Title
+
+Brief 1-2 sentence description of what this does.
+
+## When to Use
+- Bullet points describing when this directive applies
+- Specific use cases or triggers
+
+## Inputs
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `--param` | Yes/No   | What it does |
+
+## Execution
+
+### Step 1: [Action Name]
+```bash
+python3 execution/script_name.py --arg value
+```
+
+Explain what this step does and any context needed.
+
+### Step 2: [Next Action]
+...continue with numbered steps...
+
+## Output
+
+- What the user receives (e.g., Google Sheet URL, document link)
+- What format/columns/fields are included
+- Where deliverables are stored
+
+## Edge Cases
+- **Scenario**: What can go wrong
+  - → How to handle it
+
+## Learnings
+- (Updated as you discover things)
+- Date: What was learned
+```
+
+### Directive Style Rules
+
+1. **Use YAML frontmatter** for simple directives (optional):
+   ```markdown
+   ---
+   description: Brief description of what this does
+   ---
+   ```
+
+2. **Reference execution scripts explicitly**:
+   ```markdown
+   ## Tool
+   **Script:** `execution/script_name.py`
+   **Usage:** What it does in one line
+   ```
+
+3. **Show exact CLI commands**:
+   ```bash
+   python3 execution/gmaps_lead_pipeline.py --search "plumbers in Austin TX" --limit 50
+   ```
+
+4. **Use tables for parameters and outputs**:
+   | Parameter | Default | Description |
+   |-----------|---------|-------------|
+
+5. **Document costs if applicable**:
+   | Component | Cost per unit |
+   |-----------|---------------|
+   | Apify scrape | ~$0.01-0.02 |
+   | Claude Haiku | ~$0.002 |
+
+6. **Include Learnings section** — update with discoveries:
+   ```markdown
+   ## Learnings
+   - Claude Haiku is sufficient for extraction and costs 10x less than Sonnet
+   - ~10-15% of business websites return 403/503 errors - this is normal
+   - 50 leads takes ~3-4 minutes with 3 workers
+   ```
+
+7. **Distinguish intermediates from deliverables**:
+   - Intermediate: `.tmp/leads_timestamp.json` (never show to user)
+   - Deliverable: Google Sheet URL (what user actually receives)
+
+8. **Be explicit about multi-step workflows**: Use numbered steps with clear transitions like "Pass the output from Step 1 to Step 2"
+
+9. **Include troubleshooting section** for common errors:
+   ```markdown
+   ## Troubleshooting
+
+   ### "No leads found"
+   - Check search query is valid
+   - Include location in query
+
+   ### 403 Forbidden errors
+   - ~10-15% of sites block scrapers
+   - Handled gracefully, lead still saved with partial data
+   ```
+
+---
+
+## How to Write Execution Scripts
+
+Execution scripts are **deterministic Python tools** that do the actual work. They should be reliable, testable, and standalone.
+
+### Script Structure
+
+Use this template for new execution scripts:
+
+```python
+#!/usr/bin/env python3
+"""
+script_name.py
+
+Brief description of what this script does.
+
+Usage:
+    python3 execution/script_name.py --arg1 value --arg2 value
+
+Inputs:
+    --arg1: Description of argument
+    --arg2: Description of argument
+
+Outputs:
+    - What the script produces (JSON file, Google Sheet, etc.)
+"""
+
+import os
+import sys
+import json
+import argparse
+from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+
+def main_function(param1, param2):
+    """
+    Core logic for the script.
+    
+    Args:
+        param1: Description
+        param2: Description
+        
+    Returns:
+        Result object or data
+    """
+    # Implementation here
+    pass
+
+
+def save_results(results, prefix="output"):
+    """
+    Save results to a JSON file in .tmp/
+    """
+    if not results:
+        print("No results to save.")
+        return None
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = ".tmp"
+    os.makedirs(output_dir, exist_ok=True)
+
+    filename = f"{output_dir}/{prefix}_{timestamp}.json"
+    
+    with open(filename, "w") as f:
+        json.dump(results, f, indent=2)
+        
+    print(f"Results saved to {filename}")
+    return filename
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Script description")
+    parser.add_argument("--arg1", required=True, help="What this arg does")
+    parser.add_argument("--arg2", type=int, default=10, help="With default")
+    parser.add_argument("--flag", action="store_true", help="Boolean flag")
+    
+    args = parser.parse_args()
+    
+    results = main_function(args.arg1, args.arg2)
+    
+    if results:
+        print(f"Success: processed {len(results)} items")
+        save_results(results)
+    else:
+        print("Error occurred.", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Script Style Rules
+
+1. **Shebang and docstring** — Every script starts with:
+   ```python
+   #!/usr/bin/env python3
+   """
+   script_name.py
+   
+   Description, usage, inputs, outputs.
+   """
+   ```
+
+2. **Load dotenv early**:
+   ```python
+   from dotenv import load_dotenv
+   load_dotenv()
+   ```
+
+3. **Use argparse for CLI arguments**:
+   ```python
+   parser = argparse.ArgumentParser(description="...")
+   parser.add_argument("--query", required=True, help="...")
+   parser.add_argument("--limit", type=int, default=25)
+   parser.add_argument("--no-email-filter", action="store_true")
+   ```
+
+4. **Check for required environment variables**:
+   ```python
+   api_token = os.getenv("APIFY_API_TOKEN")
+   if not api_token:
+       print("Error: APIFY_API_TOKEN not found in .env", file=sys.stderr)
+       return None
+   ```
+
+5. **Save intermediates to `.tmp/`** with timestamps:
+   ```python
+   filename = f".tmp/{prefix}_{timestamp}.json"
+   ```
+
+6. **Print progress and debug info**:
+   ```python
+   print(f"Starting scrape for '{query}' in '{location}' (Limit: {max_items})...")
+   print(f"Debug: run_input = {json.dumps(run_input, indent=2)}")
+   ```
+
+7. **Return JSON to stdout for chaining**:
+   ```python
+   print(json.dumps(response, indent=2))
+   ```
+
+8. **Use proper error handling**:
+   ```python
+   try:
+       result = api_call()
+   except requests.exceptions.HTTPError as e:
+       if e.response.status_code == 429:
+           retry_after = int(e.response.headers.get('Retry-After', 60))
+           time.sleep(retry_after)
+   ```
+
+9. **Implement retry logic with exponential backoff**:
+   ```python
+   max_retries = 3
+   for attempt in range(max_retries):
+       try:
+           response = requests.post(url, json=payload, timeout=30)
+           response.raise_for_status()
+           return response.json()
+       except Exception as e:
+           if attempt == max_retries - 1:
+               raise
+           time.sleep(2 ** attempt)  # 1s, 2s, 4s
+   ```
+
+10. **Support both stdin and file input** for JSON processing:
+    ```python
+    if len(sys.argv) > 1:
+        with open(sys.argv[1], 'r') as f:
+            data = json.load(f)
+    else:
+        data = json.loads(sys.stdin.read())
+    ```
+
+11. **Use dataclasses for structured config**:
+    ```python
+    from dataclasses import dataclass, field
+    
+    @dataclass
+    class Config:
+        client_email: str
+        project_title: str
+        tokens: List[Dict[str, str]] = field(default_factory=list)
+    ```
+
+12. **Handle Google Sheets auth properly**:
+    ```python
+    # Check token.json first (OAuth), then fall back to service account
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    elif os.path.exists('credentials.json'):
+        flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0)
+    ```
+
+13. **Use batch operations for large datasets**:
+    ```python
+    if len(all_data) > 1000:
+        chunk_size = 1000
+        for i in range(0, len(all_data), chunk_size):
+            chunk = all_data[i:i + chunk_size]
+            worksheet.update(values=chunk, range_name=f"A{i+1}:...")
+    ```
+
+14. **Exit with proper codes**:
+    ```python
+    if __name__ == "__main__":
+        sys.exit(main())  # main() returns 0 on success, 1 on failure
+    ```
+
+### Common Patterns
+
+**Google Sheets integration:**
+- `read_sheet.py` — Read data from sheet to JSON
+- `update_sheet.py` — Upload JSON to sheet (creates if needed)
+- `append_to_sheet.py` — Add rows to existing sheet
+
+**API scraping:**
+- Check for API token in env
+- Use Apify client for managed scraping
+- Handle rate limits with retry logic
+- Save raw results to `.tmp/`
+
+**LLM processing:**
+- Use Claude Haiku for extraction (cheaper)
+- Use Opus 4.5 for complex reasoning
+- Always set timeout and max tokens
+
+---
+
 ## File Organization
 
 **Deliverables vs Intermediates:**
