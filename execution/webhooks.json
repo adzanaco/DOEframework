@@ -1,0 +1,4 @@
+{
+  "_comment": "Webhook slug → directive mapping. Each webhook maps to exactly one directive.",
+  "webhooks": {}
+}

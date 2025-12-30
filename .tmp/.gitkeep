@@ -1,0 +1,3 @@
+# This file exists to keep the .tmp directory in git
+# All contents of .tmp/ are gitignored except this file
+# .tmp/ is for intermediate/temporary files during processing
