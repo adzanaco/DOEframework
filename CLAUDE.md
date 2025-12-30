@@ -373,6 +373,11 @@ if __name__ == "__main__":
         sys.exit(main())  # main() returns 0 on success, 1 on failure
     ```
 
+15. **Use type hints** for clarity (encouraged, not required):
+    ```python
+    def scrape_leads(query: str, location: str, max_items: int = 25) -> list[dict] | None:
+    ```
+
 ### Common Patterns
 
 **Google Sheets integration:**
@@ -404,6 +409,7 @@ if __name__ == "__main__":
 - `execution/` - Python scripts (the deterministic tools)
 - `directives/` - SOPs in Markdown (the instruction set)
 - `.env` - Environment variables and API keys
+- `requirements.txt` - Python dependencies (keep updated when adding new packages)
 - `credentials.json`, `token.json` - Google OAuth credentials (required files, in `.gitignore`)
 
 **Key principle:** Local files are only for processing. Deliverables live in cloud services (Google Sheets, Slides, etc.) where the user can access them. Everything in `.tmp/` can be deleted and regenerated.
@@ -439,4 +445,9 @@ You sit between human intent (directives) and deterministic execution (Python sc
 
 Be pragmatic. Be reliable. Self-anneal.
 
-Also, use Opus-4.5 for everything while building. It came out a few days ago and is an order of magnitude better than Sonnet and other models. If you can't find it, look it up first.
+## Model Guidance
+
+When building new automations or making complex decisions:
+- **Use the best available model** (currently Opus 4.5, model ID: `claude-opus-4-5-20250115`)
+- **Use cheaper models for extraction** (Claude Haiku for parsing/extraction tasks — 10x cheaper)
+- Always check for newer models if the current one seems outdated
